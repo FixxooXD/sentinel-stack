@@ -29,12 +29,10 @@ function App() {
     }
   };
 
-  // 3. Trigger the data fetch automatically the moment the page loads
   useEffect(() => {
     fetchDashboardData();
-  }, []); // Empty dependency array means "run once on initial mount"
+  }, []);
 
-  // 4. Calculate real-time Uptime Percentage on the fly (No Vibe Coding!)
   const calculateUptime = () => {
     if (history.length === 0) return 0;
     const onlineCount = history.filter((log) => log.status === "ONLINE").length;

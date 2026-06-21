@@ -5,12 +5,33 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
+from contextlib import asynccontextmanager
 
 # Import our database connection logic and schema blueprints
 from database.connection import get_db
-from database.models import UptimeLog
+from database.models import UptimeLog, MonitoringTarget
+from pinger import monitor_targets_list
 
-app = FastAPI(title="SentinelStack Engine")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    FastAPI lifespan context manager that initializes the background monitoring daemon
+    when the application starts and ensures graceful shutdown.
+    """
+    # Start the background monitoring task as a concurrent asyncio task
+    monitoring_task = asyncio.create_task(monitor_targets_list())
+    
+    print("🚀 SentinelStack Engine is up and running! Background monitoring has started.")
+    
+    yield  # The boundary line. The application stays running right here.
+    
+    # Everything written HERE executes when you shut down the server
+    monitoring_task.cancel()
+    print("🛑 SentinelStack Engine is shutting down. Background monitoring has stopped.")
+
+app = FastAPI(title="SentinelStack Engine", lifespan=lifespan)
 
 origins = [
     "http://localhost:5173",
@@ -61,6 +82,16 @@ async def add_monitoring_target(payload: TargetCreate, db: AsyncSession = Depend
     Registers a new corporate domain or API endpoint into 
     the system monitoring registry list.
     """
+
+# 1. Map incoming JSON data to our MonitoringTarget table blueprint
+    new_target = MonitoringTarget(
+        name=payload.name,
+        url=payload.url
+    )
+
+    db.add(new_target)
+    await db.commit()
+
     return {
         "message": f"Successfully registered {payload.name} for continuous monitoring",
         "monitoring_url": payload.url,

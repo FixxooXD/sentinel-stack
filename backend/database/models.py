@@ -14,3 +14,13 @@ class UptimeLog(Base):
     http_status: Mapped[int] = mapped_column(Integer, nullable=False)
     latency_ms: Mapped[float | None] = mapped_column(Float, nullable=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class MonitoringTarget(Base):
+    __tablename__ = "monitoring_targets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    url: Mapped[str] = mapped_column(String(255), nullable=False)
+    active: Mapped[bool] = mapped_column(nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
