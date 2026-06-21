@@ -4,12 +4,26 @@ from fastapi import FastAPI, Depends
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi.middleware.cors import CORSMiddleware
 
 # Import our database connection logic and schema blueprints
 from database.connection import get_db
 from database.models import UptimeLog
 
 app = FastAPI(title="SentinelStack Engine")
+
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Request validation schema for target registry
 class TargetCreate(BaseModel):
