@@ -68,10 +68,13 @@ async def get_ping_history(db: AsyncSession = Depends(get_db)):
     
     # 3. Extract the clean Python objects out of the database rows
     logs = result.scalars().all()
+
+    targets = (await db.execute(select(MonitoringTarget))).scalars().all()
     
     return {
         "total_records": len(logs),
-        "history": logs
+        "history": logs,
+        "targets": targets
     }
 
 
