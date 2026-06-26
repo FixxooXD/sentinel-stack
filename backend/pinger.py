@@ -21,6 +21,7 @@ async def monitor_targets_list():
             async with AsyncSessionLocal() as db:
 
                 query = select(MonitoringTarget).where(MonitoringTarget.active == True)
+                print(f"🔍 [DAEMON] Fetching active monitoring .{MonitoringTarget}")
                 result = await db.execute(query)
                 active_targets = result.scalars().all()
              
@@ -29,35 +30,39 @@ async def monitor_targets_list():
                 else:
                     print(f"\n⏱️  [DAEMON] Starting automated monitoring cycle for {len(active_targets)} registered nodes...")
                     
-                for target_record in active_targets:
-                    url = target_record.url
-                    display_name = url.replace("https://", "").replace("http://", "")
+                    for target_record in active_targets:
+                        url = target_record.url
+                        display_name = url.replace("https://", "").replace("http://", "")
 
-                    start_time = time.perf_counter()
+                        start_time = time.perf_counter()
 
-                    try:
-                        response = await client.head(url, timeout=5.0)
-                        latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
-                        status_state = "ONLINE"
-                        http_code = response.status_code
-                    except httpx.RequestError:
-                        latency_ms = None
-                        status_state = "OFFLINE"
-                        http_code = 500
+                        try:
+                            response = await client.head(url, timeout=5.0)
+                            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+                            status_state = "ONLINE"
+                            http_code = response.status_code
+                        except httpx.RequestError:
+                            latency_ms = None
+                            status_state = "OFFLINE"
+                            http_code = 500
                     
                     # Package metrics into our SQLAlchemy database structure
-                    log_entry = UptimeLog(
-                        target=url,
-                        status=status_state,
-                        http_status=http_code,
-                        latency_ms=latency_ms
-                    )
-                    db.add(log_entry)
+                        log_entry = UptimeLog(
+                            target_id=target_record.id,
+                            target=url,
+                            status=status_state,
+                            http_status=http_code,
+                            latency_ms=latency_ms
+                        )
+                        db.add(log_entry)
+                    # Loop ends here!
                     
-                # Commit all logs simultaneously at the end of the target iteration loop
-                await db.commit()
-                print(f"💾 [DAEMON] Database snapshot committed successfully at {time.strftime('%X')}.")
+                #Executes ONCE after ALL targets are pinged
+                    await db.commit()
+                    print(f"💾 [DAEMON] Database snapshot committed successfully at {time.strftime('%X')}.")
             
+                    
+                
             # Yield control back to the core event loop for 60 seconds
             print("💤 [DAEMON] Sleeping for 60 seconds...\n")
-            await asyncio.sleep(60)
+            await asyncio.sleep(60)     

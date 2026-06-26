@@ -41,33 +41,27 @@ function App() {
   // 4. Submit a brand new target to our automated monitoring engine
   const handleAddTarget = async (e) => {
     e.preventDefault();
-    if (!targetName || !targetUrl) return;
+    setLoading(true); // 1. Turn on a quick visual button spinner/loading state
 
     try {
-      setFormSubmitting(true);
-      setFormMessage("");
-
       const response = await fetch("http://localhost:8000/targets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: targetName, url: targetUrl }),
       });
 
-      if (!response.ok)
-        throw new Error("Failed to register monitoring target.");
+      if (response.ok) {
+        // 2. CRITICAL: Re-call your data fetching functions instantly!
+        // This tells your UI to pull down the newly added target and its initial log row.
+        await fetchDashboardData();
 
-      const result = await response.json();
-      setFormMessage(`✅ ${result.message}`);
-
-      setTargetName("");
-      setTargetUrl("");
-
-      // Refresh to pull updated dynamic entries immediately
-      fetchDashboardData();
-    } catch (err) {
-      setFormMessage(`❌ Error: ${err.message}`);
+        setTargetName(""); // Clear form inputs
+        setTargetUrl("");
+      }
+    } catch (error) {
+      console.error("Failed to append configuration registry:", error);
     } finally {
-      setFormSubmitting(false);
+      setLoading(false); // 3. Turn off the spinner state
     }
   };
 
